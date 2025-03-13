@@ -1,3 +1,6 @@
+#Lais Kumasaka Santos | RA:23006548
+#Maria Eduarda Souza Araujo Pompiani Costa | RA:23005493
+
 import socket
 import threading
 import sys
@@ -16,7 +19,7 @@ def limpar_tela():
     os.system('cls' if os.name == 'nt' else 'clear')
 
 def exibir_legenda():
-    """Exibe a legenda dos comandos disponíveis."""
+    """Exibe a legenda comandos disponíveis."""
     print("=== Comandos Disponíveis ===")
     print("1. timer XX segundos/minutos - Inicia um timer.")
     print("2. quanto falta? - Consulta o tempo restante do timer.")

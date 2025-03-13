@@ -1,3 +1,6 @@
+#Lais Kumasaka Santos | RA:23006548
+#Maria Eduarda Souza Araujo Pompiani Costa | RA:23005493
+
 import socket
 import threading
 import time
@@ -8,7 +11,7 @@ import sys
 timers={}
 timers_lock = threading.Lock()
 
-# Lista para armazenar os sockets dos clientes
+# Lista sockets dos clientes
 clientes = []
 clientes_lock = threading.Lock()
 
@@ -60,7 +63,7 @@ def processar_comando(comando, socket_cliente):
         except Exception as e:
             print(f"Erro ao enviar mensagem de desconexão: {e}")
         finally:
-            # Fecha o socket e remove o cliente da lista (se ainda estiver na lista)
+            # Fecha o socket e remove o cliente da lista 
             with clientes_lock:
                 if socket_cliente in clientes:
                     clientes.remove(socket_cliente)
