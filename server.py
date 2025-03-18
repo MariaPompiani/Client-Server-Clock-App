@@ -16,34 +16,50 @@ clientes = []
 clientes_lock = threading.Lock()
 
 def processar_comando(comando, socket_cliente):
-    global dados_timer
+    global timers
     partes = comando.split()
-    
+
     if len(partes) >= 2 and partes[0] == "timer":
         try:
             valor = int(partes[1])
             unidade = partes[2] if len(partes) > 2 else "segundos"
             duracao = valor * 60 if unidade == "minutos" else valor
-            
-            with timers_lock:
-                timers[socket_cliente] = {"tempo_final": time.time() + duracao, "executando": True}
-            
-            socket_cliente.send(f"Timer iniciado por {valor} {unidade}.".encode())
-            print(f"Cliente {socket_cliente.getpeername()} iniciou um timer de {valor} {unidade}.")
 
-            # Timer rodando em background
-            threading.Thread(target=aguardar_timer, args=(socket_cliente,), daemon=True).start()
+            with timers_lock:
+                if socket_cliente not in timers:
+                    timers[socket_cliente] = []
+
+                # Criar um identificador único para o timer
+                timer_id = f"Timer{len(timers[socket_cliente]) + 1}"
+
+                # Adicionar o novo timer à lista
+                timers[socket_cliente].append({
+                    "id": timer_id,
+                    "tempo_final": time.time() + duracao,
+                    "executando": True
+                })
+
+            socket_cliente.send(f"{timer_id} iniciado por {valor} {unidade}.".encode("utf-8"))
+            print(f"Cliente {socket_cliente.getpeername()} iniciou {timer_id} de {valor} {unidade}.")
+
+            # Iniciar uma nova thread para monitorar o timer
+            threading.Thread(target=aguardar_timer, args=(socket_cliente, timer_id), daemon=True).start()
+
         except Exception as e:
-            socket_cliente.send(b"Comando invalido.")
+            socket_cliente.send("Comando inválido.".encode("utf-8"))
             print(f"Erro ao processar comando 'timer': {e}")
 
     elif comando == "quanto falta?":
         with timers_lock:
-            if socket_cliente in timers and timers[socket_cliente]["executando"]:
-                restante = max(0, int(timers[socket_cliente]["tempo_final"] - time.time()))
-                socket_cliente.send(f"Tempo restante: {restante} segundos".encode())
+            if socket_cliente in timers and timers[socket_cliente]:
+                resposta = "Timers em execução:\n"
+                for timer in timers[socket_cliente]:
+                    if timer["executando"]:
+                        restante = max(0, int(timer["tempo_final"] - time.time()))
+                        resposta += f"{timer['id']}: {restante} segundos restantes\n"
+                socket_cliente.send(resposta.encode())
             else:
-                socket_cliente.send(b"Nenhum timer em execucao.")
+                socket_cliente.send("Nenhum timer em execução.".encode("utf-8"))
 
     elif comando == "stop":
         with timers_lock:
@@ -70,20 +86,24 @@ def processar_comando(comando, socket_cliente):
             socket_cliente.close()
             print(f"Cliente {socket_cliente.getpeername()} desconectado.")
 
-def aguardar_timer(socket_cliente):
+def aguardar_timer(socket_cliente, timer_id):
     while True:
         with timers_lock:
-            if socket_cliente not in timers or not timers[socket_cliente]["executando"]:
+            # Procurar o timer específico do cliente
+            timer_atual = next((t for t in timers.get(socket_cliente, []) if t["id"] == timer_id), None)
+
+            if not timer_atual or not timer_atual["executando"]:
                 break
-            restante = max(0, int(timers[socket_cliente]["tempo_final"] - time.time()))
-        
+
+            restante = max(0, int(timer_atual["tempo_final"] - time.time()))
+
         if restante == 0:
             with timers_lock:
-                timers["executando"] = False
-                timers["tempo_final"] = None
+                # Finalizar o timer e removê-lo da lista
+                timer_atual["executando"] = False
             
-            socket_cliente.send(b"Timer finalizado.")
-            print(f"Timer do cliente {socket_cliente.getpeername()} finalizado.")
+            socket_cliente.send(f"{timer_id} finalizado.".encode("utf-8"))
+            print(f"{timer_id} do cliente {socket_cliente.getpeername()} finalizado.")
             break
 
         time.sleep(1)
