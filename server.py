@@ -49,28 +49,33 @@ def processar_comando(comando, socket_cliente):
             socket_cliente.send("Comando inválido.".encode("utf-8"))
             print(f"Erro ao processar comando 'timer': {e}")
 
-    elif comando == "quanto falta?":
-        with timers_lock:
-            if socket_cliente in timers and timers[socket_cliente]:
-                resposta = "Timers em execução:\n"
-                for timer in timers[socket_cliente]:
-                    if timer["executando"]:
-                        restante = max(0, int(timer["tempo_final"] - time.time()))
-                        resposta += f"{timer['id']}: {restante} segundos restantes\n"
-                socket_cliente.send(resposta.encode())
-            else:
-                socket_cliente.send("Nenhum timer em execução.".encode("utf-8"))
+    elif partes[0].lower() == "quanto" and partes[1].lower() == "falta" and len(partes) == 3:
+        timer_id = partes[2].strip("?").lower()  # Remove "?" e padroniza para minúsculas
 
-    elif comando == "stop":
         with timers_lock:
-            if socket_cliente in timers and timers[socket_cliente]["executando"]:
-                timers[socket_cliente]["executando"] = False
-                timers[socket_cliente]["tempo_final"] = None
-                socket_cliente.send(b"Timer interrompido.")
-                print(f"Timer do cliente {socket_cliente.getpeername()} interrompido.")
+            timer_atual = next((t for t in timers.get(socket_cliente, []) if t["id"].lower() == timer_id), None)
+
+            if timer_atual and timer_atual["executando"]:
+                restante = max(0, int(timer_atual["tempo_final"] - time.time()))
+                socket_cliente.send(f"Tempo restante para {timer_atual['id']}: {restante} segundos.".encode("utf-8"))
             else:
-                socket_cliente.send(b"Nenhum timer em execucao.")
-        
+                socket_cliente.send(f"{timer_id} não está em execução.".encode("utf-8"))
+
+
+    elif partes[0].lower() == "stop" and len(partes) == 2:
+        timer_id = partes[1].lower()  # Padroniza para minúsculas
+
+        with timers_lock:
+            timer_atual = next((t for t in timers.get(socket_cliente, []) if t["id"].lower() == timer_id), None)
+
+            if timer_atual and timer_atual["executando"]:
+                timer_atual["executando"] = False
+                socket_cliente.send(f"{timer_atual['id']} interrompido.".encode("utf-8"))
+                print(f"{timer_atual['id']} do cliente {socket_cliente.getpeername()} interrompido.")
+            else:
+                socket_cliente.send(f"{timer_id} não está em execução.".encode("utf-8"))
+
+
     elif comando == "sair":
         try:
             # Envia a mensagem de desconexão
