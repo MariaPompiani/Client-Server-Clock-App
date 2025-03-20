@@ -8,7 +8,7 @@ from datetime import datetime
 import sys
 
 # Estrutura de dados para o timer compartilhado
-timers={}
+timers = {}
 timers_lock = threading.Lock()
 
 # Lista sockets dos clientes
@@ -57,7 +57,11 @@ def processar_comando(comando, socket_cliente):
 
             if timer_atual and timer_atual["executando"]:
                 restante = max(0, int(timer_atual["tempo_final"] - time.time()))
-                socket_cliente.send(f"Tempo restante para {timer_atual['id']}: {restante} segundos.".encode("utf-8"))
+                if restante > 60:
+                    restante1 = restante/60
+                    socket_cliente.send(f"Tempo restante para {timer_atual['id']}: {restante1} minutos.".encode("utf-8"))
+                else:
+                    socket_cliente.send(f"Tempo restante para {timer_atual['id']}: {restante} segundos.".encode("utf-8"))
             else:
                 socket_cliente.send(f"{timer_id} não está em execução.".encode("utf-8"))
 
@@ -75,7 +79,6 @@ def processar_comando(comando, socket_cliente):
             else:
                 socket_cliente.send(f"{timer_id} não está em execução.".encode("utf-8"))
 
-
     elif comando == "sair":
         try:
             # Envia a mensagem de desconexão
@@ -84,7 +87,7 @@ def processar_comando(comando, socket_cliente):
         except Exception as e:
             print(f"Erro ao enviar mensagem de desconexão: {e}")
         finally:
-            # Fecha o socket e remove o cliente da lista 
+            # Fecha o socket e remove o cliente da lista
             with clientes_lock:
                 if socket_cliente in clientes:
                     clientes.remove(socket_cliente)
@@ -106,7 +109,7 @@ def aguardar_timer(socket_cliente, timer_id):
             with timers_lock:
                 # Finalizar o timer e removê-lo da lista
                 timer_atual["executando"] = False
-            
+
             socket_cliente.send(f"{timer_id} finalizado.".encode("utf-8"))
             print(f"{timer_id} do cliente {socket_cliente.getpeername()} finalizado.")
             break
@@ -129,7 +132,6 @@ def lidar_com_cliente(socket_cliente):
         with clientes_lock:
             clientes.append(socket_cliente)
         socket_cliente.send(f"{datetime.now().strftime('%H:%M:%S')}: CONECTADO!!\nDigite um comando: ".encode())
-        print(f"Novo cliente conectado: {socket_cliente.getpeername()}")
 
         # Thread para enviar horário a cada 30 segundos
         thread_enviar_horario = threading.Thread(target=enviar_horario, args=(socket_cliente,), daemon=True)
@@ -145,49 +147,76 @@ def lidar_com_cliente(socket_cliente):
 
     except Exception as e:
         print(f"Erro ao lidar com o cliente: {e}")
+    finally:
+        remover_cliente(socket_cliente)  # Chama a nova função
+
 
 def receber_comandos(socket_cliente):
     while True:
         try:
             dados = socket_cliente.recv(1024).decode().strip()
             if not dados:
-                print(f"Cliente {socket_cliente.getpeername()} desconectado.")
-                with clientes_lock:
-                    if socket_cliente in clientes:
-                        clientes.remove(socket_cliente)
-                socket_cliente.close()
-                break
+                raise ConnectionResetError
+            
             processar_comando(dados, socket_cliente)
-        except Exception as e:
-            print(f"Erro ao receber comandos: {e}")
+
+        except(ConnectionResetError, BrokenPipeError):
+            print(f"Cliente {socket_cliente.getpeername()} desconectado abruptamente")
             with clientes_lock:
                 if socket_cliente in clientes:
                     clientes.remove(socket_cliente)
-            socket_cliente.close()
-            break
+                socket_cliente.close()
+            break      
+        except Exception as e:
+            print(f"Erro ao receber comandos: {e}")
+            remover_cliente(socket_cliente)  # Chama a nova função
+            
+    with clientes_lock:
+        if socket_cliente in clientes:
+            clientes.remove(socket_cliente)
+    socket_cliente.close()
+
+def remover_cliente(socket_cliente):
+    """Remove um cliente da lista de clientes e fecha sua conexão"""
+    with clientes_lock:
+        if socket_cliente in clientes:
+            clientes.remove(socket_cliente)
+    try:
+        socket_cliente.close()
+    except Exception as e:
+        print(f"Erro ao fechar conexão do cliente {socket_cliente.getpeername()}: {e}")
+    print(f"Cliente {socket_cliente.getpeername()} removido corretamente.")
+
 
 def iniciar_servidor(limite_clientes):
     servidor = socket.socket(socket.AF_INET, socket.SOCK_STREAM)
     servidor.bind(("127.0.0.1", 12345))
     servidor.listen(5)
     print("Servidor rodando na porta 12345...")
-    
+
     while True:
         try:
             socket_cliente, endereco = servidor.accept()
+            
             with clientes_lock:
-                if len(clientes) < limite_clientes:
+                if len(clientes) <= limite_clientes:  
+                    clientes.append(socket_cliente)  
                     threading.Thread(target=lidar_com_cliente, args=(socket_cliente,), daemon=True).start()
+                    print(f"Novo cliente conectado: {endereco}.")
                 else:
+                    print(f"Conexão recusada para {endereco}: limite de {limite_clientes} clientes atingido.")
                     socket_cliente.send(b"Limite de clientes atingido. Tente novamente mais tarde.")
                     socket_cliente.close()
         except Exception as e:
             print(f"Erro ao aceitar conexão: {e}")
 
+
+
 if __name__ == "__main__":
     if len(sys.argv) != 2:
         print("Uso: python server.py <limite_clientes>")
         sys.exit(1)
-    
+
     limite_clientes = int(sys.argv[1])
     iniciar_servidor(limite_clientes)
+

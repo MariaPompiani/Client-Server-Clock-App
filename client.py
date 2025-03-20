@@ -34,10 +34,14 @@ def receber_horario(socket_cliente):
         try:
             dados = socket_cliente.recv(1024).decode()
             if not dados:
-                print("Número de Conexões excedido. Conexão com o servidor encerrada.")
+                print("Conexão com o servidor encerrada.")
                 encerrar_threads.set()
                 break
             mensagens.put(dados)  # Adiciona a mensagem à fila
+        except ConnectionResetError:
+            print("Conexão com o servidor foi resetada.")
+            encerrar_threads.set()
+            break
         except Exception as e:
             if not encerrar_threads.is_set():
                 print(f"Erro ao receber mensagens: {e}")
@@ -70,6 +74,10 @@ def enviar_comandos(socket_cliente):
                 encerrar_threads.set()  # Sinaliza para encerrar as threads
                 time.sleep(0.5)  # Aguarda a mensagem "Desconectando..." ser exibida
                 break
+        except ConnectionResetError:
+            print("Conexão com o servidor foi resetada.")
+            encerrar_threads.set()
+            break
         except Exception as e:
             if not encerrar_threads.is_set():
                 print(f"Erro ao enviar comando: {e}")
@@ -109,8 +117,13 @@ def iniciar_cliente():
         cliente.close()
         print("Conexão encerrada.")
         sys.exit(0)
+    except ConnectionRefusedError:
+        print("Erro: Não foi possível conectar ao servidor. Verifique se o servidor está rodando.")
     except Exception as e:
         print(f"Erro ao conectar ao servidor: {e}")
+    finally:
+        if 'cliente' in locals():
+            cliente.close()
 
 if __name__ == "__main__":
     iniciar_cliente()
