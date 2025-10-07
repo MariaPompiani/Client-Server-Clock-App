@@ -1,54 +1,54 @@
-# Relógio-Timer
+# Clock-Timer Server
 
-Este é um projeto da disciplina de Redes e Conexões, cujo objetivo é introduzir conceitos fundamentais de comunicação cliente-servidor, protocolo TCP, threads e sockets em Python. O sistema implementa um servidor que gerencia conexões de clientes, fornece a hora atualizada periodicamente e permite a interação dos clientes com um timer.
+This is a project for the Networks and Connections course, designed to introduce fundamental concepts of client-server communication, the TCP protocol, threads, and sockets in Python. The system implements a server that manages client connections, periodically provides the current time, and allows clients to interact with a timer.
 
-## Estrutura do Projeto
-O projeto consiste em dois arquivos principais:
+## Project Structure
+The project consists of two main files:
 
-- **server.py** (Servidor):
-  - Gerencia múltiplas conexões de clientes.
-  - Envia periodicamente a hora atual para os clientes conectados.
-  - Processa comandos recebidos dos clientes, como iniciar, verificar e interromper timers.
-  - Utiliza threads para lidar com cada cliente individualmente.
+- **`server.py` (Server):**
+  - Manages multiple client connections.
+  - Periodically sends the current time to connected clients.
+  - Processes commands received from clients, such as starting, checking, and stopping timers.
+  - Uses threads to handle each client individually.
 
-- **client.py** (Cliente):
-  - Conecta-se ao servidor.
-  - Envia comandos ao servidor, como iniciar timers e consultar o tempo restante.
-  - Recebe e exibe mensagens enviadas pelo servidor, incluindo o horário atualizado e respostas aos comandos.
-  - Implementa threads para gerenciar simultaneamente a entrada do usuário e a recepção de mensagens do servidor.
+- **`client.py` (Client):**
+  - Connects to the server.
+  - Sends commands to the server, such as starting timers and querying the remaining time.
+  - Receives and displays messages sent by the server, including the updated time and command responses.
+  - Implements threads to simultaneously manage user input and receive messages from the server.
 
-## Funcionalidades Implementadas
+## Implemented Features
 
-- O servidor aceita conexões de múltiplos clientes simultaneamente.
-- Envio automático da hora atual do servidor para os clientes conectados a cada 20 segundos.
-- Comandos suportados pelo cliente:
-  - `timer XX segundos/minutos`: Inicia um timer pelo tempo especificado.
-  - `quanto falta?`: Consulta o tempo restante do timer ativo.
-  - `stop`: Interrompe um timer em execução.
-  - `sair`: Desconecta o cliente do servidor.
+- The server accepts connections from multiple clients simultaneously.
+- Automatic broadcast of the server's current time to all connected clients every 20 seconds.
+- Client-side commands supported:
+  - `timer XX segundos/minutos`: Starts a timer for the specified duration.
+  - `quanto falta?`: Checks the remaining time on the active timer.
+  - `stop`: Stops a running timer.
+  - `sair`: Disconnects the client from the server.
 
-## Como Executar
+## How to Run
 
-### Iniciando o Servidor
-No terminal, execute o seguinte comando para iniciar o servidor, definindo um limite de conexões simultâneas:
+### Starting the Server
+In a terminal, run the following command to start the server, defining a limit for simultaneous connections:
 ```sh
-python server.py <limite_conexoes>
+python server.py <connection_limit>
 ```
-Exemplo:
+Example:
 ```sh
 python server.py 5
 ```
-Se configurado corretamente, a seguinte mensagem será exibida:
+If configured correctly, the following message will be displayed:
 ```
 Servidor rodando na porta 12345...
 ```
 
-### Iniciando o Cliente
-Em outro terminal, execute:
+### Starting the Client
+In another terminal, run:
 ```sh
 python client.py
 ```
-O cliente exibirá um menu de comandos disponíveis e aguardará a entrada do usuário.
+The client will display a menu of available commands and await user input.
 
 ## Exemplo de Uso
 ```sh
@@ -62,15 +62,15 @@ Digite um comando: sair
 Desconectando...
 ```
 
-## Tecnologias Utilizadas
+## Technologies Used
 - Python 3
-- Biblioteca `socket` para comunicação via TCP
-- Biblioteca `threading` para manipulação de múltiplas conexões
-- Biblioteca `datetime` para gestão do horário
-- Biblioteca `sys` para manipulação de argumentos
+- `socket` library for TCP communication
+- `threading`  library for handling multiple connections
+- `datetime` library for time management
+- `sys` library for handling command-line arguments
 
-## Autores
+## Authors
 - **Lais Kumasaka Santos**
 - **Maria Eduarda Souza Araujo Pompiani Costa** 
 
-Projeto desenvolvido como parte da disciplina de Redes e Conexões - Pontifícia Universidade Católica de Campinas
+Project developed as part of the Networks and Connections course at Pontifical Catholic University of Campinas.
